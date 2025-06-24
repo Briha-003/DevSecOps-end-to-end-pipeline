@@ -1,0 +1,47 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "static-nginx"
+    }
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                git 'https://github.com/Briha-003/DevSecOps-end-to-end-pipeline.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t $IMAGE_NAME .'
+            }
+        }
+
+        stage('Run Trivy Scan') {
+            steps {
+                sh './trivy-scan.sh'
+            }
+        }
+
+        stage('Deploy Container') {
+            steps {
+                sh 'docker rm -f static-nginx || true'
+                sh 'docker run -d --name static-nginx -p 8085:80 $IMAGE_NAME'
+            }
+        }
+    }
+
+    post {
+        success {
+            mail to: 'josyulabrihadeesh@gmail.com',
+                 subject: "Build Success: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "The build was successful. Visit the site at http://localhost:8085"
+        }
+        failure {
+            mail to: 'josyulabrihadeesh@gmail.com',
+                 subject: "Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "Check Jenkins for logs: ${env.BUILD_URL}"
+        }
+    }
+}
